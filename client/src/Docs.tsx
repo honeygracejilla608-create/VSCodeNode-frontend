@@ -7,13 +7,12 @@ const Step: React.FC<{ number: number; title: string; children: React.ReactNode 
     </span>
     <div className="flex-1">
       <h3 className="text-lg font-semibold text-gray-800 mb-2">{title}</h3>
-      {children}
     </div>
   </li>
 );
 
 const Callout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="bg-green-50 border-l-4 border-green-400 p-4 my-2 rounded">
+  <div className="bg-blue-50 border-l-4 border-blue-400 p-4 my-2 rounded">
     {children}
   </div>
 );
@@ -28,69 +27,81 @@ const Docs: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-lg overflow-hidden">
-        <div className="bg-red-600 px-6 py-4">
-          <h1 className="text-3xl font-bold text-white">Firebase Deployment Troubleshooting Guide</h1>
+        <div className="bg-blue-600 px-6 py-4">
+          <h1 className="text-3xl font-bold text-white">Integrating Firebase Service Account Secrets in GitHub</h1>
         </div>
         <div className="px-6 py-8">
           <section className="mb-8">
             <p className="text-lg text-gray-700 leading-relaxed">
-              This guide helps you diagnose and resolving common Firebase deployment errors encountered during GitHub Actions workflows, ensuring smooth CI/CD for your projects.
+              This guide walks you through securely adding your Firebase service account key as a GitHub Actions repository secret, enabling automated deployments to Firebase Hosting.
             </p>
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-gray-800 mb-6">Sequential Troubleshooting Steps</h2>
+            <h2 className="text-2xl font-semibold text-gray-800 mb-6">Step-by-Step Guide</h2>
             <ol className="space-y-6">
-              <Step number={1} title="Check Deployment Logs in GitHub Actions">
-                <p className="text-gray-700 mb-2">Review the detailed logs to identify the specific error.</p>
+              <Step number={1} title="Access Repository Settings">
+                <p className="text-gray-700 mb-2">Navigate to your GitHub repository settings for secrets.</p>
+                <p className="text-gray-600">Go to: <a href="https://github.com/honeygracejilla608-create/VSCodeNode-frontend/settings/secrets/actions" className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">https://github.com/honeygracejilla608-create/VSCodeNode-frontend/settings/secrets/actions</a></p>
+              </Step>
+
+              <Step number={2} title="Add a New Repository Secret">
+                <p className="text-gray-700 mb-2">Create the secret with your Firebase service account JSON.</p>
+                <ul className="list-disc list-inside text-gray-600 space-y-1 mb-4">
+                  <li>Click <strong>"New repository secret"</strong>.</li>
+                  <li>In <strong>"Name"</strong>, enter: <code className="bg-gray-100 px-1 rounded">FIREBASE_SERVICE_ACCOUNT</code></li>
+                  <li>In <strong>"Secret"</strong>, paste your full Firebase service account key JSON.</li>
+                  <li>Click <strong>"Add secret"</strong> to save.</li>
+                </ul>
+                <Callout>
+                  <strong>Example JSON Structure:</strong>
+                  <pre className="bg-gray-100 p-2 rounded text-sm mt-2 overflow-x-auto">
+{`{
+  "type": "service_account",
+  "project_id": "your-project-id",
+  "private_key_id": "...",
+  "private_key": "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n",
+  "client_email": "firebase-adminsdk@your-project.iam.gserviceaccount.com",
+  ...
+}`}
+                  </pre>
+                  <p className="text-sm mt-2">Get this from Firebase Console > Project Settings > Service Accounts > Generate new private key.</p>
+                </Callout>
+              </Step>
+
+              <Step number={3} title="Trigger GitHub Actions Deployment">
+                <p className="text-gray-700 mb-2">Start a new deployment to test the secret.</p>
                 <ul className="list-disc list-inside text-gray-600 space-y-1">
-                  <li>Navigate to your GitHub repository.</li>
-                  <li>Go to the "Actions" tab.</li>
-                  <li>Click on the latest failed workflow run.</li>
-                  <li>Expand the "Deploy to Firebase" job to view error messages.</li>
+                  <li><strong>Option 1:</strong> Push a small change to the main branch (e.g., add a comment in any file).</li>
+                  <li><strong>Option 2:</strong> Run the 1-click deployment script if available in your repo.</li>
+                  <li>Monitor progress in the <strong>Actions</strong> tab of your GitHub repository.</li>
                 </ul>
               </Step>
-
-              <Step number={2} title="Verify Secrets and Environment Variables">
-                <p className="text-gray-700 mb-2">Ensure all required secrets are correctly configured.</p>
-                <Callout>
-                  <strong>Fix:</strong> Confirm the <code className="bg-gray-100 px-1 rounded">FIREBASE_SERVICE_ACCOUNT</code> secret in GitHub repository settings is set to the exact JSON from your Firebase service account key file, including all fields like <code className="bg-gray-100 px-1 rounded">type</code>, <code className="bg-gray-100 px-1 rounded">project_id</code>, etc. No extra spaces or modifications.
-                </Callout>
-              </Step>
-
-              <Step number={3} title="Confirm Firebase Hosting Configuration">
-                <p className="text-gray-700 mb-2">Ensure Firebase Hosting is properly set up for your project.</p>
-                <Callout>
-                  <strong>Fix:</strong> In Firebase Console, select your project, navigate to Hosting, and click "Get Started" to enable it. Verify the project ID in your workflow matches (e.g., <code className="bg-gray-100 px-1 rounded">studio-7693519829-4e97b</code>).
-                </Callout>
-              </Step>
-
-              <Step number={4} title="Review Permissions and Access Controls">
-                <p className="text-gray-700 mb-2">Check that the service account has the necessary permissions.</p>
-                <Callout>
-                  <strong>Fix:</strong> Ensure the service account has the Firebase Admin role. In Google Cloud Console > IAM, verify the account's roles for your project.
-                </Callout>
-              </Step>
-
-              <Step number={5} title="Retry Deployment">
-                <p className="text-gray-700 mb-2">Trigger a new deployment attempt after fixes.</p>
-                <Callout>
-                  <strong>Fix:</strong> Make a small change (e.g., edit a comment in <code className="bg-gray-100 px-1 rounded">client/src/App.tsx</code>), then run <code className="bg-gray-100 px-1 rounded">.\deploy.bat</code> or manually: <code className="bg-gray-100 px-1 rounded">git add .</code>, <code className="bg-gray-100 px-1 rounded">git commit -m "Retry deploy"</code>, <code className="bg-gray-100 px-1 rounded">git push origin main</code>.
-                </Callout>
-              </Step>
             </ol>
+          </section>
+
+          <section className="mb-8">
+            <h2 className="text-2xl font-semibold text-gray-800 mb-4">Tips and Security Recommendations</h2>
+            <InfoBox>
+              <ul className="list-disc list-inside space-y-1">
+                <li><strong>Never share keys publicly:</strong> Keep service account keys secure and avoid committing them to code.</li>
+                <li><strong>Restrict permissions:</strong> Limit the service account to only necessary Firebase roles (e.g., Editor for Hosting).</li>
+                <li><strong>Rotate keys regularly:</strong> Generate new keys periodically and update secrets to maintain security.</li>
+                <li><strong>Use environment variables:</strong> For local development, store keys in <code className="bg-gray-100 px-1 rounded">.env</code> files (add to .gitignore).</li>
+              </ul>
+            </InfoBox>
+          </section>
 
           <section>
-            <h2 className="text-2xl font-semibold text-gray-800 mb-4">Additional Help</h2>
-            <InfoBox>
-              <p className="text-gray-700">
-                If these steps don't resolve the issue, check for specific error messages like "Invalid credentials" or "Project not found." Some Firebase internal errors may resolve on retry. For further assistance, consult the Firebase documentation or contact support.
-              </p>
-            </InfoBox>
+            <h2 className="text-2xl font-semibold text-gray-800 mb-4">Success Confirmation</h2>
+            <p className="text-gray-700">
+              If successful, you'll see a green checkmark in the GitHub Actions run. Your app will be deployed to Firebase Hosting (e.g., <code className="bg-gray-100 px-1 rounded">https://your-project.web.app</code>). Check the live site for updates!
+            </p>
           </section>
         </div>
       </div>
     </div>
   );
+};
 
 export default Docs;
