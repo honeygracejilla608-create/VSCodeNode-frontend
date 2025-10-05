@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { auth, db } from './firebase'
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut, User, createUserWithEmailAndPassword } from 'firebase/auth'
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut, User, createUserWithEmailAndPassword, signInAnonymously } from 'firebase/auth'
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, where } from 'firebase/firestore'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import Dashboard from './Dashboard'
@@ -34,10 +34,33 @@ function App() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user)
+      if (user) {
+        setUser(user)
+      } else {
+        // Auto-login with random credentials
+        autoLogin()
+      }
     })
     return unsubscribe
   }, [])
+
+  const autoLogin = async () => {
+    const randomEmail = `user${Math.random().toString(36).substr(2, 9)}@example.com`
+    const randomPassword = Math.random().toString(36).substr(2, 12)
+    try {
+      await createUserWithEmailAndPassword(auth, randomEmail, randomPassword)
+      console.log('Auto-created user:', randomEmail)
+    } catch (error) {
+      console.error('Auto-login failed:', error)
+      // Fallback to anonymous
+      try {
+        await signInAnonymously(auth)
+        console.log('Signed in anonymously')
+      } catch (anonError) {
+        console.error('Anonymous login failed:', anonError)
+      }
+    }
+  }
 
   useEffect(() => {
     if (user) {
@@ -181,23 +204,8 @@ function App() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
         <div className="bg-white p-8 rounded shadow-md">
-          <h1 className="text-2xl mb-4">{isRegister ? 'Register' : 'Login'}</h1>
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            className="w-full p-2 border mb-4"
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            className="w-full p-2 border mb-4"
-          />
-          <button onClick={handleAuth} className="w-full bg-blue-500 text-white p-2 mb-2">{isRegister ? 'Register' : 'Login'}</button>
-          <button onClick={() => setIsRegister(!isRegister)} className="w-full text-blue-500">{isRegister ? 'Already have an account? Login' : 'Need an account? Register'}</button>
+          <h1 className="text-2xl mb-4">Auto-Logging In...</h1>
+          <p>Creating random credentials for demo.</p>
         </div>
       </div>
     )
