@@ -21,6 +21,8 @@ function App() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState('')
   const [editDesc, setEditDesc] = useState('')
+  const [prompt, setPrompt] = useState('')
+  const [story, setStory] = useState('')
   const [isRegister, setIsRegister] = useState(false)
 
   const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GOOGLE_AI_API_KEY || '')
@@ -79,6 +81,23 @@ function App() {
     } catch (error) {
       console.error('AI error:', error)
       alert('Failed to generate task with AI')
+    }
+  }
+
+  const generateStory = async () => {
+    if (!prompt.trim()) {
+      alert('Please enter a prompt')
+      return
+    }
+    try {
+      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+      const result = await model.generateContent(prompt)
+      const response = result.response
+      const text = response.text()
+      setStory(text)
+    } catch (error) {
+      console.error('AI error:', error)
+      alert('Failed to generate story')
     }
   }
 
@@ -218,6 +237,24 @@ function App() {
           </li>
         ))}
       </ul>
+
+      <div className="mt-8 p-6 bg-gray-100 rounded">
+        <h2 className="text-2xl mb-4">AI Story Generator</h2>
+        <input
+          type="text"
+          placeholder="Enter a prompt for the story"
+          value={prompt}
+          onChange={e => setPrompt(e.target.value)}
+          className="w-full p-2 border mb-4"
+        />
+        <button onClick={generateStory} className="bg-blue-500 text-white p-2 mb-4">Generate Story</button>
+        {story && (
+          <div className="bg-white p-4 rounded shadow">
+            <h3 className="text-lg mb-2">Generated Story:</h3>
+            <p className="whitespace-pre-wrap">{story}</p>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
