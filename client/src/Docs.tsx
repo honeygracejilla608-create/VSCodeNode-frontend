@@ -79,7 +79,6 @@ const Docs: React.FC = () => {
                 </Callout>
               </Step>
             </ol>
-          </section>
 
           <section>
             <h2 className="text-2xl font-semibold text-gray-800 mb-4">Additional Help</h2>
