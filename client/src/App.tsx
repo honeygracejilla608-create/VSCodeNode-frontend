@@ -23,6 +23,8 @@ function App() {
   const [editDesc, setEditDesc] = useState('')
   const [prompt, setPrompt] = useState('')
   const [story, setStory] = useState('')
+  const [chatMessages, setChatMessages] = useState<{ role: string; text: string }[]>([])
+  const [chatInput, setChatInput] = useState('')
   const [isRegister, setIsRegister] = useState(false)
 
   const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GOOGLE_AI_API_KEY || '')
@@ -98,6 +100,24 @@ function App() {
     } catch (error) {
       console.error('AI error:', error)
       alert('Failed to generate story')
+    }
+  }
+
+  const sendMessage = async () => {
+    if (!chatInput.trim()) return
+    const userMessage = { role: 'user', text: chatInput }
+    setChatMessages(prev => [...prev, userMessage])
+    setChatInput('')
+    try {
+      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+      const result = await model.generateContent(chatInput)
+      const response = result.response
+      const text = response.text()
+      const aiMessage = { role: 'ai', text }
+      setChatMessages(prev => [...prev, aiMessage])
+    } catch (error) {
+      console.error('Chat error:', error)
+      setChatMessages(prev => [...prev, { role: 'ai', text: 'Sorry, I encountered an error.' }])
     }
   }
 
@@ -254,6 +274,28 @@ function App() {
             <p className="whitespace-pre-wrap">{story}</p>
           </div>
         )}
+      </div>
+
+      <div className="mt-8 p-6 bg-purple-100 rounded">
+        <h2 className="text-2xl mb-4">AI Chat</h2>
+        <div className="mb-4 h-64 overflow-y-auto border p-2 bg-white">
+          {chatMessages.map((msg, index) => (
+            <div key={index} className={`mb-2 ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
+              <span className={`inline-block p-2 rounded ${msg.role === 'user' ? 'bg-blue-200' : 'bg-gray-200'}`}>
+                <strong>{msg.role === 'user' ? 'You' : 'AI'}:</strong> {msg.text}
+              </span>
+            </div>
+          ))}
+        </div>
+        <input
+          type="text"
+          placeholder="Ask the AI anything..."
+          value={chatInput}
+          onChange={e => setChatInput(e.target.value)}
+          onKeyPress={e => e.key === 'Enter' && sendMessage()}
+          className="w-full p-2 border mb-2"
+        />
+        <button onClick={sendMessage} className="bg-purple-500 text-white p-2">Send</button>
       </div>
     </div>
   )
