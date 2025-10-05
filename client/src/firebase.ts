@@ -1,20 +1,23 @@
+// Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
-import { getAuth, createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
+import { getAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
 
+// Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  apiKey: "AIzaSyCleOSnhrKnXz0TZZ-zkUXNyEen7C9vXe4",
+  authDomain: "studio-7693519829-4e97b.firebaseapp.com",
+  projectId: "studio-7693519829-4e97b",
+  storageBucket: "studio-7693519829-4e97b.firebasestorage.app",
+  messagingSenderId: "3133407941",
+  appId: "1:3133407941:web:3883822caba86c856a26ac"
 };
 
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
+
+// Initialize Firebase Authentication and get a reference to the service
 export const auth = getAuth(app);
 
-export async function registerAndVerify(email: string, pwd: string) {
-  const { user } = await createUserWithEmailAndPassword(auth, email, pwd);
-  await sendEmailVerification(user);
-  return user;
-}
+// Initialize Cloud Firestore and get a reference to the service
+export const db = getFirestore(app);
