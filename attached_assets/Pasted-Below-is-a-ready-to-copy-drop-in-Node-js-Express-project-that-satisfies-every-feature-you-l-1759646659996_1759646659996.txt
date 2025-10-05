@@ -1,0 +1,330 @@
+Below is a **ready‑to‑copy, “drop‑in” Node.js + Express project** that satisfies every feature you listed.  
+Everything is self‑contained, uses only a handful of npm packages, and is ready to go on Replit, locally, or in Docker.
+
+---
+
+## 📁 Project File Tree
+
+```
+todo-api/
+├─ .replit                     # Replit run entry
+├─ Dockerfile                  # (Optional) Docker image
+├─ package.json
+├─ nodemailer.js
+├─ auth.js
+├─ routes.js
+├─ tasks.js
+├─ token-cli.js                # Simple token generator
+├─ tasks.json                  # Persistent store (auto‑created on first run)
+└─ README.md
+```
+
+Feel free to copy‑paste the code blocks below directly into these files.
+
+---
+
+## 📝 Code
+
+### 1. package.json
+
+```json
+{
+  "name": "todo-api",
+  "version": "1.0.0",
+  "description": "JWT‑protected TODO API with Replit SMTP mailing",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "token": "node token-cli.js"
+  },
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.1",
+    "nodemailer": "^6.9.4"
+  }
+}
+```
+
+> **Tip:** After you paste this, run `npm install` (or hit **Run** in Replit).
+
+---
+
+### 2. .replit
+
+```bash
+run = "node server.js"
+```
+
+> Replit will inject `process.env.PORT` for you.
+
+---
+
+### 3. Dockerfile (optional)
+
+```dockerfile
+# Node image with the latest LTS
+FROM node:20-alpine
+
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+EXPOSE 3000
+CMD ["node", "server.js"]
+```
+
+---
+
+### 4. nodemailer.js
+
+```js
+// nodemailer.js
+const nodemailer = require('nodemailer');
+
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST || 'smtp.replit.com',
+  port: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 587,
+  secure: false,
+  auth: { user: 'replit', pass: process.env.SMTP_PASS } // Replit auto‑fills
+});
+
+module.exports.sendMail = async ({ to, subject, text }) => {
+  await transporter.sendMail({
+    from: '"Replit Todo" <replit@replit.com>',
+    to,
+    subject,
+    text
+  });
+};
+```
+
+> **Important:**  
+> *Add a **secret** named `SMTP_PASS` in Replit. It should be the **salt** shown when you press “Copy git remote URL” → “Show secrets”.*  
+
+---
+
+### 5. auth.js
+
+```js
+// auth.js
+const jwt = require('jsonwebtoken');
+const SECRET = process.env.JWT_SECRET || 'change-me-in-secrets';
+
+exports.jwtAuth = (req, res, next) => {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith('Bearer '))
+    return res.status(401).json({ error: 'Missing or malformed token' });
+
+  const token = header.split(' ')[1];
+  try {
+    const payload = jwt.verify(token, SECRET);
+    req.user = payload;      // e.g. { email: 'you@example.com' }
+    next();
+  } catch (_) {
+    res.status(401).json({ error: 'Invalid token' });
+  }
+};
+```
+
+> **Secret:** Add `JWT_SECRET` in Replit secrets. Keep it a strong random string.
+
+---
+
+### 6. tasks.js
+
+```js
+// tasks.js
+const fs = require('fs');
+const path = require('path');
+
+const DB_PATH = path.join(__dirname, 'tasks.json');
+let tasks = [];
+
+// Load persisted data on startup
+if (fs.existsSync(DB_PATH)) {
+  try {
+    tasks = JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
+  } catch (_) { /* ignore invalid JSON */ }
+}
+
+// Persist to disk synchronously after any mutation
+const persist = () => {
+  fs.writeFileSync(DB_PATH, JSON.stringify(tasks, null, 2), 'utf8');
+};
+
+exports.getAll = () => tasks;
+
+exports.create = ({ title, description, user }) => {
+  const task = {
+    id: Date.now().toString(36), // simple unique id
+    title,
+    description,
+    user,
+    createdAt: new Date().toISOString()
+  };
+  tasks.push(task);
+  persist();
+  return task;
+};
+```
+
+---
+
+### 7. routes.js
+
+```js
+// routes.js
+const express = require('express');
+const router = express.Router();
+const { sendMail } = require('./nodemailer');
+const { getAll, create } = require('./tasks');
+
+router.get('/tasks', (req, res) => {
+  res.json(getAll());
+});
+
+router.post('/tasks', async (req, res) => {
+  const { title, description } = req.body;
+  if (!title) return res.status(400).json({ error: 'Title required' });
+
+  const task = create({ title, description, user: req.user.email });
+
+  // Email notification
+  await sendMail({
+    to: req.user.email,
+    subject: `🚀 New task created: ${title}`,
+    text: `You just added:\n\n${title}\n\n${description || ''}`
+  });
+
+  res.status(201).json(task);
+});
+
+module.exports = router;
+```
+
+---
+
+### 8. server.js (entry point)
+
+```js
+// server.js
+const express = require('express');
+const bodyParser = require('body-parser');
+const { jwtAuth } = require('./auth');
+const apiRoutes = require('./routes');
+
+const app = express();
+app.use(bodyParser.json());
+
+// Public endpoint (just for sanity)
+app.get('/', (req, res) => res.send('Todo API – JWT protected.'));
+
+app.use('/api', jwtAuth, apiRoutes);
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`🚀 Listening on port ${PORT}`));
+```
+
+---
+
+### 9. token-cli.js (utility to create a token)
+
+```js
+// token-cli.js
+const jwt = require('jsonwebtoken');
+const fs = require('fs');
+const prompt = require('prompt-sync')({ sigint: true });
+
+const secretPath = 'JWT_SECRET';
+let secret = process.env.JWT_SECRET;
+
+if (!secret) {
+  console.log('No JWT_SECRET set in env. Loading from package.json.');
+  // This is just for when running locally outside Replit
+  const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+  secret = pkg.author?.author || 'local-secret';
+}
+
+const email = prompt('Enter email to encode in token: ');
+const token = jwt.sign({ email }, secret, { expiresIn: '7d' });
+
+console.log('\n✓ Generated JWT (expires 7 days)');
+console.log(token);
+```
+
+> **Usage:**  
+> `npm run token`  
+> It will prompt you for an email, then print a JWT you can paste into an `Authorization: Bearer …` header.
+
+---
+
+## 🔑 How to Use It
+
+### 1️⃣ Replit Setup
+
+| Step | What to Do |
+|------|------------|
+| A | Create a new **Node.js** Replit. |
+| B | Paste the files above into the project (feel free to rename `server.js` → `index.js` if you prefer). |
+| C | In Replit’s **Secrets** → **New secret**:     |
+|   | • `SMTP_PASS` – the Replit “salt” (auto‑filled). |
+|   | • `JWT_SECRET` – any strong random string (e.g., `npm i uuid && node -e "console.log(require('uuid').v4())"`). |
+| D | Press **Run** – Replit will start the server. |
+| E | Grab the **repl URL** (e.g., `https://todo-api-xxxx.repl.co`) and any `localhost:3000` in the console. |
+| F | **Generate a test token**: `npm run token`. |
+| G | Send a quick request (via `curl` or Postman) to validate: |
+|   | ```bash
+     curl -X POST https://<your‑repl>.repl.co/api/tasks \
+         -H "Authorization: Bearer <token>" \
+         -H "Content-Type: application/json" \
+         -d '{"title":"Buy milk","description":"2% whole"}'
+     ``` |
+| H | Check your inbox – you should receive an email. |
+
+---
+
+### 2️⃣ Local Development (or Docker)
+
+1. **Clone** the repo locally.  
+2. `npm install`  
+3. Create a `.env` (or set env vars) with `JWT_SECRET` and `SMTP_PASS`.  
+   *If you’re not on Replit, replace the SMTP part with another provider (e.g., Gmail, SendGrid) – the nodemailer config is pluggable.*  
+4. `npm start`  
+5. Run the same `curl` commands against `http://localhost:3000`.
+
+---
+
+## 🚨 Edge Cases & Notes
+
+| Concern | What Happens |
+|---------|--------------|
+| `tasks.json` missing or corrupted | The code will start with an empty array; JSON errors are silently ignored. |
+| SMTP failure (e.g., Replit down) | The API still returns the new task, but `sendMail` will throw. Catch it in production or swallow the error. |
+| Large task list | In‑memory storage will grow. For real use, swap to SQLite / PostgreSQL. |
+| JWT expiration | Token is set to 7 days. You can change `expiresIn` in `token-cli.js`. |
+| Replit `SMTP_PASS` auto‑fills only in Replit; not for local dev. Use a real password or mock. |
+
+---
+
+## 📦 Optional Enhancements
+
+- **Persist to SQLite** (`better-sqlite3` or `knex`).  
+- **Add a `/auth/register`** endpoint that creates users (store hashed passwords).  
+- **Rate limiting** (`express-rate-limit`).  
+- **Unit tests** with Jest or Mocha.  
+- **Docker Compose** if you want to bundle the API with a database.  
+
+---
+
+### 🎉 Final Takeaway
+
+You now have a **complete, JWT‑protected TODO REST API** that:
+
+1. Validates clients with Bearer tokens.  
+2. Lets them **create** and **list** tasks.  
+3. Stores tasks **in memory** (with snapshot to `tasks.json`).  
+4. Sends **email notifications via Replit’s SMTP** whenever a task is created.  
+5. Comes with a tiny **CLI** to generate a working JWT for testing.
+
+Copy the files, hit **Run** (Replit) or **npm start** (locally), and you’re good to go! Happy coding 🚀

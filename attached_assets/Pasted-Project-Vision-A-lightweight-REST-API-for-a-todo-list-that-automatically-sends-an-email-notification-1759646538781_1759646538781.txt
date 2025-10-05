@@ -1,0 +1,141 @@
+Project Vision
+A lightweight REST API for a todo list that automatically sends an email notification whenever a new task is added.
+
+Key points:
+
+Feature	Why it matters
+Express/Node.js	Fast, familiar, great for beginners.
+JWT‑protected routes	Shows how to secure a simple API.
+In‑memory store (or SQLite)	No external DB required – perfect for a Replit demo.
+Replit SMTP (nodemailer)	Demonstrates how to send real emails from within Replit.
+Dockerfile & Procfile	So the API can be exported or run on other hosts.
+High‑Level Flow
+POST /tasks
+Body: { title, description }
+Auth: Bearer JWT (simple token – you can hard‑code it for now).
+Action:
+
+Save the task (push to array).
+Send a “Thank you for adding a task” email to the user via Replit SMTP.
+GET /tasks
+Auth: Bearer JWT.
+Action: Return all tasks.
+
+GET /tasks/:id ← optional (view a single task).
+
+DELETE /tasks/:id ← optional.
+
+All responses are JSON.
+
+Quick File Layout
+todo-api/
+│
+├─ .replit          ← (replit run command)
+├─ package.json
+├─ nodemailer.js    ← mail helper
+├─ auth.js          ← simple JWT middleware
+├─ routes.js        ← Express routes
+├─ app.js           ← main entry
+├─ tasks.json       ← optional persistence file
+└─ README.md
+Basic Code Sketch
+// app.js
+const express = require('express');
+const bodyParser = require('body-parser');
+const { sendMail } = require('./nodemailer');
+const { jwtAuth } = require('./auth');
+const router = require('./routes');
+
+const app = express();
+app.use(bodyParser.json());
+
+app.use('/api', jwtAuth, router);
+
+// Keep server alive on Replit
+app.get('/', (req, res) => res.send('Todo API'));
+app.listen(process.env.PORT || 3000, () => console.log('Listening'));
+// nodemailer.js
+const nodemailer = require('nodemailer');
+
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST || 'smtp.replit.com',
+  port: 587,
+  secure: false,
+  auth: { user: 'replit', pass: process.env.SMTP_PASS }, // Replit auto‑fills
+});
+
+module.exports.sendMail = async (to, subject, text) => {
+  await transporter.sendMail({ from: 'Replit Todo <replit@replit.com>', to, subject, text });
+};
+// auth.js (really simple JWT)
+const jwt = require('jsonwebtoken');
+const SECRET = 'YOUR_SECRET_HERE';
+
+module.exports.jwtAuth = (req, res, next) => {
+  const auth = req.headers.authorization;
+  if (!auth || !auth.startsWith('Bearer '))
+    return res.status(401).json({ error: 'Missing token' });
+  try {
+    const payload = jwt.verify(auth.split(' ')[1], SECRET);
+    req.user = payload;          // e.g., { email: 'you@example.com' }
+    next();
+  } catch {
+    res.status(401).json({ error: 'Invalid token' });
+  }
+};
+// routes.js
+const express = require('express');
+const router = express.Router();
+const { sendMail } = require('./nodemailer');
+let tasks = [];                    // In‑memory; replace with DB
+let nextId = 1;
+
+router.post('/tasks', async (req, res) => {
+  const { title, description } = req.body;
+  const task = { id: nextId++, title, description, user: req.user.email };
+  tasks.push(task);
+
+  // Send email notification
+  await sendMail(
+    req.user.email,
+    'New Task Created 🎉',
+    `You added a new task: ${title}\n\n${description}`
+  );
+
+  res.status(201).json(task);
+});
+
+router.get('/tasks', (req, res) => res.json(tasks));
+
+module.exports = router;
+Getting It Running on Replit
+Create a new Replit (Node.js).
+
+Copy the files above into the Replit project.
+
+Add nodemailer, express, jsonwebtoken, and body-parser to package.json (or run npm i nodemailer express jsonwebtoken body-parser).
+
+Add SMTP_PASS secret:
+Go to Secrets → New secret → key: SMTP_PASS, value: your repo’s salt (the auto‑filled password).
+
+Define a secret JWT key (e.g., JWT_SECRET in Secrets).
+
+Set run command in .replit:
+
+run = "node app.js"
+Hit Run.
+
+In the console, Replit will supply a PORT (e.g., https://<your-repl>.repl.co).
+
+Test the API using curl or Postman:
+
+# generate a quick token (do this from any Node REPL)
+node -e "console.log(require('jsonwebtoken').sign({email:'you@example.com'}, 'YOUR_SECRET_HERE'));"
+Then call:
+
+curl -X POST https://<your-repl>.repl.co/api/tasks \
+     -H "Authorization: Bearer <token>" \
+     -H "Content-Type: application/json" \
+     -d '{"title":"Buy milk","description":"2% whole milk"}'
+You should see the new task in the JSON response and an email arrive in your inbox.
+
