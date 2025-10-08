@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chatbot Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #007bff;
+        }
+        .chat-container {
+            display: flex;
+            height: 500px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .chat-sidebar {
+            width: 200px;
+            background-color: #f9f9f9;
+            padding: 10px;
+            border-right: 1px solid #ddd;
+        }
+        .chat-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-messages {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+            background-color: #fafafa;
+        }
+        .message {
+            margin-bottom: 10px;
+            padding: 8px;
+            border-radius: 4px;
+        }
+        .message.user {
+            background-color: #007bff;
+            color: white;
+            text-align: right;
+        }
+        .message.bot {
+            background-color: #e9ecef;
+            color: #333;
+        }
+        .chat-input {
+            padding: 10px;
+            border-top: 1px solid #ddd;
+            display: flex;
+        }
+        .chat-input input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px 0 0 4px;
+        }
+        .chat-input button {
+            padding: 8px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 0 4px 4px 0;
+            cursor: pointer;
+        }
+        .chat-input button:hover {
+            background-color: #0056b3;
+        }
+        .document-integration {
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #e7f3ff;
+            border-left: 4px solid #007bff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>AI Chatbot Dashboard</h1>
+        
+        <div class="document-integration">
+            <h3>AI Integration Status</h3>
+            <p><strong>Current</strong>: Connected to backend at https://cascade.onhercules.app for real AI responses.</p>
+            <p><strong>Backend</strong>: Node.js server with database and llama.cpp integration deployed on Hercules.</p>
+        </div>
+        
+        <div class="chat-container">
+            <div class="chat-sidebar">
+                <h3>Chat Sessions</h3>
+                <ul id="session-list">
+                    <li onclick="loadSession('session1')">General Chat</li>
+                    <li onclick="loadSession('session2')">Document Query</li>
+                </ul>
+            </div>
+            <div class="chat-main">
+                <div class="chat-messages" id="chat-messages">
+                    <div class="message bot">
+                        <strong>AI:</strong> Hello! I'm your AI assistant. Ask me anything or select a document to query about it.
+                    </div>
+                </div>
+                <div class="chat-input">
+                    <input type="text" id="message-input" placeholder="Type your message..." onkeypress="handleKeyPress(event)">
+                    <button onclick="sendMessage()">Send</button>
+                </div>
+            </div>
+        </div>
+        
+        <div style="margin-top: 20px; text-align: center;">
+            <a href="index.html">Back to Project Hub</a>
+        </div>
+    </div>
+
+    <script>
+        function sendMessage() {
+            const input = document.getElementById('message-input');
+            const message = input.value.trim();
+            if (message) {
+                addMessage('user', message);
+                input.value = '';
+                // Simulate AI response
+                setTimeout(() => {
+                    respondToMessage(message);
+                }, 1000);
+            }
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        function addMessage(sender, text) {
+            const messages = document.getElementById('chat-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+            messageDiv.innerHTML = `<strong>${sender === 'user' ? 'You' : 'AI'}:</strong> ${text}`;
+            messages.appendChild(messageDiv);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        async function respondToMessage(userMessage) {
+            const selectedDoc = document.getElementById('document-select').value;
+            let context = '';
+            
+            if (selectedDoc) {
+                // Get document ID from the selected document (simulate for now)
+                context = `Document: ${selectedDoc}`;
+            }
+            
+            try {
+                const response = await fetch('http://localhost:3001/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: userMessage,
+                        documentId: selectedDoc ? 'sample-id' : null, // Replace with real ID from backend
+                        context: context
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    addMessage('bot', data.response);
+                } else {
+                    addMessage('bot', 'Error: Could not get AI response. Check backend and llama.cpp servers.');
+                }
+            } catch (error) {
+                addMessage('bot', 'Error: Backend server not responding.');
+                console.error('Fetch error:', error);
+            }
+        }
+
+        function loadDocumentContext() {
+            const selectedDoc = document.getElementById('document-select').value;
+            if (selectedDoc) {
+                // Simulate loading document context
+                addMessage('bot', `Loaded context for ${selectedDoc}. You can now ask questions about its content. In a real implementation, this would parse the document and provide accurate context to the AI model.`);
+            }
+        }
+
+        function loadSession(sessionId) {
+            // Simulate loading chat session
+            document.getElementById('chat-messages').innerHTML = '<div class="message bot"><strong>AI:</strong> Session loaded.</div>';
+        }
+    </script>
+</body>
+</html>

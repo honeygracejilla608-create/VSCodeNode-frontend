@@ -1,0 +1,59 @@
+# GPU-Enabled AI Development Dockerfile
+FROM nvidia/cuda:12.1-devel-ubuntu22.04
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV DEBIAN_FRONTEND=noninteractive
+ENV CUDA_HOME=/usr/local/cuda
+ENV PATH=$CUDA_HOME/bin:$PATH
+ENV LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    python3.10 \
+    python3.10-pip \
+    python3.10-dev \
+    git \
+    curl \
+    wget \
+    build-essential \
+    libffi-dev \
+    libssl-dev \
+    libbz2-dev \
+    libreadline-dev \
+    libsqlite3-dev \
+    liblzma-dev \
+    libncurses-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create symlink for python
+RUN ln -s /usr/bin/python3.10 /usr/bin/python
+
+# Set working directory
+WORKDIR /app
+
+# Copy requirements and install Python packages
+COPY ai-requirements.txt .
+RUN pip install --no-cache-dir -r ai-requirements.txt
+
+# Copy application code
+COPY . .
+
+# Create AI models directory
+RUN mkdir -p /app/ai_models
+RUN mkdir -p /app/ai_data
+
+# Set up Jupyter Lab
+EXPOSE 8888
+# Set up API server
+EXPOSE 3001
+
+# Health check for AI services
+COPY healthcheck-ai.js .
+RUN chmod +x healthcheck-ai.js
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD node healthcheck-ai.js
+
+# Default command (can be overridden)
+CMD ["python", "-m", "jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--allow-root"]

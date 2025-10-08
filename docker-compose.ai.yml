@@ -1,0 +1,134 @@
+version: '3.8'
+
+services:
+  # Main Todo API with AI features
+  todo-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT}
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+      - ai-dev
+    networks:
+      - ai-network
+    volumes:
+      - ./server:/app/server
+      - ./shared:/app/shared
+    healthcheck:
+      test: ["CMD", "node", "healthcheck.js"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # AI GPU Development Environment
+  ai-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.ai
+    ports:
+      - "8888:8888"  # Jupyter Lab
+      - "3002:3001"  # AI API server
+    environment:
+      - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT}
+      - CUDA_VISIBLE_DEVICES=0
+    env_file:
+      - .env
+    networks:
+      - ai-network
+    volumes:
+      - ./ai_models:/app/ai_models
+      - ./ai_data:/app/ai_data
+      - ./notebooks:/app/notebooks
+      - ./ai-server.py:/app/ai-server.py
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "node", "healthcheck-ai.js"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=todo_api
+      - POSTGRES_USER=todo_user
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-your_password_here}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - ai-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U todo_user -d todo_api"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis for caching (optional)
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - ai-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Monitoring and Logging
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - ai-network
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - ai-network
+    depends_on:
+      - prometheus
+
+volumes:
+  postgres_data:
+  grafana_data:
+  ai_models:
+  ai_data:
+
+networks:
+  ai-network:
+    driver: bridge

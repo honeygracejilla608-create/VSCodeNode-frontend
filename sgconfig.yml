@@ -1,0 +1,8 @@
+model_path: models/llama-2-7b-chat.Q4_K_M.gguf
+server_port: 5000
+context_size: 512
+threads: 4
+oidc_authority: https://hercules.app
+oidc_client_id: UcvUaZgqtJtwyIbMWMvbmIVFGfVBjSNt
+oidc_redirect_uri: https://cascade.onhercules.app
+base_url: https://cascade.onhercules.app

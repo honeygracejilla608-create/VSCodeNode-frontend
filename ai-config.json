@@ -1,0 +1,61 @@
+{
+  "ai_development": {
+    "enabled": true,
+    "gpu_acceleration": true,
+    "models": {
+      "text_generation": {
+        "provider": "vertex_ai",
+        "model": "gemini-pro",
+        "gpu_enabled": false
+      },
+      "sentiment_analysis": {
+        "provider": "transformers",
+        "model": "cardiffnlp/twitter-roberta-base-sentiment-latest",
+        "gpu_enabled": true
+      },
+      "text_classification": {
+        "provider": "transformers",
+        "model": "microsoft/DialoGPT-medium",
+        "gpu_enabled": true
+      }
+    },
+    "gpu": {
+      "cuda_version": "12.1",
+      "memory_limit": "8GB",
+      "device_count": 1
+    },
+    "development": {
+      "jupyter_port": 8888,
+      "api_port": 3002,
+      "debug_mode": true,
+      "auto_reload": true
+    },
+    "deployment": {
+      "cloud_provider": "google_cloud",
+      "region": "us-central1",
+      "gpu_type": "nvidia-tesla-t4",
+      "instance_type": "n1-standard-4"
+    }
+  },
+  "monitoring": {
+    "enabled": true,
+    "metrics": ["gpu_utilization", "memory_usage", "model_performance"],
+    "alerting": {
+      "gpu_temperature_threshold": 80,
+      "memory_usage_threshold": 90,
+      "error_rate_threshold": 0.05
+    }
+  },
+  "integrations": {
+    "todo_api": {
+      "url": "http://localhost:3001",
+      "endpoints": ["/api/ai/enhance", "/api/ai/suggest"],
+      "authentication": "jwt"
+    },
+    "google_cloud": {
+      "project_id": "${GOOGLE_CLOUD_PROJECT}",
+      "vertex_ai": true,
+      "cloud_run": true
+    }
+  }
+}

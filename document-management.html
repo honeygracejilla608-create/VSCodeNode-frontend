@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Management</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #007bff;
+        }
+        .upload-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+        .document-list {
+            margin-top: 20px;
+        }
+        .document-item {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .document-item:last-child {
+            border-bottom: none;
+        }
+        .document-info {
+            flex-grow: 1;
+        }
+        .document-actions a {
+            margin-left: 10px;
+            color: #007bff;
+            text-decoration: none;
+        }
+        .document-actions a:hover {
+            text-decoration: underline;
+        }
+        .search-bar {
+            margin-bottom: 20px;
+            padding: 10px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Document Management</h1>
+        
+        <div class="upload-section">
+            <h2>Upload Document</h2>
+            <input type="file" id="file-upload" accept=".pdf,.doc,.docx,.txt,.json">
+            <button onclick="uploadFile()">Upload</button>
+            <button onclick="processForChatbot()">Process for Chatbot</button>
+        </div>
+        
+        <div class="search-section">
+            <input type="text" id="search" class="search-bar" placeholder="Search documents..." onkeyup="searchDocuments()">
+        </div>
+        
+        <div class="document-list">
+            <h2>Documents</h2>
+            <div id="document-container">
+                <div class="document-item">
+                    <div class="document-info">
+                        <strong>Sample Document 1.pdf</strong><br>
+                        Uploaded: 2023-10-01<br>
+                        <span class="status" id="status-Sample Document 1.pdf">Status: Ready</span>
+                    </div>
+                    <div class="document-actions">
+                        <a href="#" onclick="viewDocument('Sample Document 1.pdf')">View</a>
+                        <a href="#" onclick="downloadDocument('Sample Document 1.pdf')">Download</a>
+                        <a href="#" onclick="deleteDocument('Sample Document 1.pdf')">Delete</a>
+                        <a href="#" onclick="queryChatbot('Sample Document 1.pdf')">Query Chatbot</a>
+                    </div>
+                </div>
+                <div class="document-item">
+                    <div class="document-info">
+                        <strong>Sample Document 2.docx</strong><br>
+                        Uploaded: 2023-10-02<br>
+                        Size: 500 KB<br>
+                        <span class="status" id="status-Sample Document 2.docx">Status: Ready</span>
+                    </div>
+                    <div class="document-actions">
+                        <a href="#" onclick="viewDocument('Sample Document 2.docx')">View</a>
+                        <a href="#" onclick="downloadDocument('Sample Document 2.docx')">Download</a>
+                        <a href="#" onclick="deleteDocument('Sample Document 2.docx')">Delete</a>
+                        <a href="#" onclick="queryChatbot('Sample Document 2.docx')">Query Chatbot</a>
+                    </div>
+                </div>
+                <!-- Add more documents as needed -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function uploadFile() {
+            const fileInput = document.getElementById('file-upload');
+            const file = fileInput.files[0];
+            if (file) {
+                // Simulate upload
+                const documentContainer = document.getElementById('document-container');
+                const newItem = document.createElement('div');
+                newItem.className = 'document-item';
+                newItem.innerHTML = `
+                    <div class="document-info">
+                        <strong>${file.name}</strong><br>
+                        Uploaded: ${new Date().toLocaleDateString()}<br>
+                        Size: ${(file.size / 1024).toFixed(1)} KB<br>
+                        <span class="status" id="status-${file.name}">Status: Ready</span>
+                    </div>
+                    <div class="document-actions">
+                        <a href="#" onclick="viewDocument('${file.name}')">View</a>
+                        <a href="#" onclick="downloadDocument('${file.name}')">Download</a>
+                        <a href="#" onclick="deleteDocument('${file.name}')">Delete</a>
+                        <a href="#" onclick="queryChatbot('${file.name}')">Query Chatbot</a>
+                    </div>
+                `;
+                documentContainer.appendChild(newItem);
+                fileInput.value = '';
+            }
+        }
+
+        function processForChatbot() {
+            const fileInput = document.getElementById('file-upload');
+            const file = fileInput.files[0];
+            if (file) {
+                // Simulate processing for chatbot
+                const statusElement = document.getElementById('status-' + file.name);
+                if (statusElement) {
+                    statusElement.textContent = 'Status: Processing for Chatbot';
+                    setTimeout(() => {
+                        statusElement.textContent = 'Status: Ready for Queries';
+                        alert('Document processed and ready for chatbot queries!');
+                    }, 2000);
+                }
+            }
+        }
+
+        function queryChatbot(docName) {
+            const query = prompt('Enter your query about ' + docName + ':');
+            if (query) {
+                // Simulate chatbot response
+                alert('Chatbot Response: Based on ' + docName + ', ' + query + ' - [Simulated response from document content]');
+            }
+        }
+
+        function searchDocuments() {
+            const searchTerm = document.getElementById('search').value.toLowerCase();
+            const documents = document.querySelectorAll('.document-item');
+            documents.forEach(doc => {
+                const text = doc.textContent.toLowerCase();
+                doc.style.display = text.includes(searchTerm) ? 'flex' : 'none';
+            });
+        }
+
+        function viewDocument(name) {
+            alert('Viewing document: ' + name);
+        }
+
+        function downloadDocument(name) {
+            alert('Downloading document: ' + name);
+        }
+
+        function deleteDocument(name) {
+            if (confirm('Delete document: ' + name + '?')) {
+                event.target.closest('.document-item').remove();
+            }
+        }
+    </script>
+</body>
+</html>

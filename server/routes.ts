@@ -8,6 +8,11 @@ import { monitoring } from "./monitoring";
 import { insertTaskSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Serve favicon
+  app.get("/favicon.ico", (req, res) => {
+    res.status(204).end(); // No content response for favicon
+  });
+
   // Monitoring middleware - track all requests
   app.use((req, res, next) => {
     monitoring.recordRequest();
@@ -29,10 +34,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   setInterval(() => {
     monitoring.checkErrorRate();
   }, 60000); // Check every minute
-  // Public endpoint for health check
-  app.get("/", (req, res) => {
-    res.send("Todo API – JWT protected");
-  });
 
   // Generate a test token (development only)
   app.post("/api/generate-token", (req, res) => {
